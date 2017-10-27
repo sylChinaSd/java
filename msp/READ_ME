@@ -1,0 +1,9 @@
+功能：
+普通用户、管理员角色
+普通用户可以下单、浏览、收藏等
+管理员可以处理订单、管理货物等
+
+构建
+maven+springmvc+hibernate+spring
+mysql
+tomcat
