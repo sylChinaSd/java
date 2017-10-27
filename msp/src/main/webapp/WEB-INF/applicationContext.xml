@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:mvc="http://www.springframework.org/schema/mvc"
+    xmlns:p="http://www.springframework.org/schema/p"
+    xmlns:tx="http://www.springframework.org/schema/tx"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+     <bean class="com.syl.msp.utils.common.SpringContextUtils" />
+	<!-- 组件扫描设置(在service层支持事务)  -->
+    <context:component-scan base-package="com.syl.msp" use-default-filters="false">
+	    <context:include-filter type="annotation"
+	                expression="org.springframework.stereotype.Service"/>
+    </context:component-scan>	
+	
+    <!-- 配置数据库连接库    
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url" value="jdbc:mysql://localhost:3306/msp" />
+		<property name="username" value="root" />
+		<property name="password" value="" />
+	</bean>--> 
+	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+	    <property name="driverClass" value="com.mysql.jdbc.Driver"/>
+	    <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/msp"/>
+	    <property name="user" value="root"/>
+	    <property name="password" value=""/>
+	</bean>
+
+   <bean id="sessionFactory" class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="packagesToScan">
+			<value>com.syl.msp.*.entity</value>
+		</property>
+        <property name="hibernateProperties">
+            <value>
+                <!-- hibernate.dialect=org.hibernate.dialect.MySQLDialect -->
+                hibernate.dialect=com.syl.msp.utils.hibernate.MspMysqlDialect
+                hibernate.show_sql=true
+            </value>
+        </property>
+    </bean>
+    
+    <!-- 开启注解事务 -->
+    <bean id="transactionManager"
+            class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+        <property name="sessionFactory" ref="sessionFactory"/>
+    </bean>
+    
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+    
+    <!-- 配置支付宝 -->
+    <bean id="alipayService" class="com.syl.msp.pay.service.AlipayService">
+    	<constructor-arg name="serverUrl" value="https://openapi.alipaydev.com/gateway.do"></constructor-arg>
+    	<constructor-arg name="appId" value="2016080300157751"></constructor-arg>
+    	<constructor-arg name="privateKey" value="MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCQY9HiHZ6IewulTmCJsbH7QJMomSecxziTUiX1fehJH8WCi83ZoCjRtQc2c4yRGriw+Udj1c0Ar11nY9dtI2Ze2Ow3iH3ZtOeAqpqHf/iag/Izs+vOYxG6qmlv2D00rtH7Qvsv3EbAVZk0iWtNUeGNVUZjcmnVorj/kPeMDM294mpIhLMAXNl9qsJR+A3jSZynBqftrxe81jl80IyQs/VW9w+n5B3uFYOA10aYueUMjuu+wv7NbB4U2ITIb/h24bu0EqrfcMarswqY3Hby3b5FH5vxFi/0G3K7Hf/wF3GWyGpcFox6dDaneNuQ/gtVwKJKwc8PnffTMA5byRf0gPM9AgMBAAECggEAIkpSceyu1aLDJULz0j+NESpIyH921NjLKtF7ik2YeKU+9r3U6TYL+6GOUPQoEd3SttS8i40e3mbHO+KOKrEZgrTphFa57JX11KyvfjZ6B9gGERlNivokH7yQxasI/hX2cEF7/eXGN68cb0mjXf1wH2x9BukJEV9PqAH5iB0ST2GzSw5aEk9kMBL4cqTiKGeDtWmwHScqQbTUKjGdaqmgQyVHb6M0sUF4BmDY1tT1+w/+d32so98PmOzZ2sZBP/HT2DlWqG1IhnUZBC7IJn65ZxAf4Kv8qg/QqNRqH7FCCBvskTTdcVULdyohRNr8yWs0Ir5eEhAtnguNpafCpGGSgQKBgQD7xsHI71zRZlX0ZvmPQXZVO2Z9C9WYuotU5fxfEhP9sQopkIOCqGe191pqwWANdM2Iuo4xKV/Kb4K8OfQhN9PWtQ1b7AZj0uq/LLjJuNDSOZRwMfsaVEvpfmHN0fTiqHBd79Pa2Ms206IYq42RtaV0Yb0mDKqnJT5efBKb6uCFZQKBgQCSz+Vv4NDRKbOJmTETgAvLDoF7oQ40tuiy/1gqInb/ARbEMWNMcdsty2XYGKdVMOOCFEHk1xu7I2MHIbny6K71effW2Y9Yll7nMuckSnOPgs0MBXDKY6sKxdRsvMWQjal9LFojar98w8Jbv+7m5pIKnPx9DghO7qo9tBGrJJkk+QKBgQDXVWdZpjaZNVAgZo3cUt2VCeee3SdCp5EQ/F47JWgJmogZgmqnrcZ9n98p3Nd8ysAax4tjSoKNzY9f0qUUX/4C7PhO/O9+It74wJQOms2mbu6ggm7DVwNR4PBfKsmprOvlu39S9gXfj2NcfCTpURUAE7PFPiIaMEVGZBE6XsjF7QKBgG+fKW6am6mr7xlbI/kTjePhL4lztn1V5C7T/ZBri9XuWgTpF/pzRpXW46QdenxHI3MvO7pl4muySASQG/UX/I4fIdR0rYxJJ/bYuOzavmoKpSPSryLyDIWwTAYwsHVrf8XwBsiOzPBrVkaz80wTWk4/dakPFjoNM9qeIiDhPp7hAoGARBSIB6xAmJu709vbTSCOMPhLxwz9yfVrf/Kg7cYDzyCJ07zTaAPJZ527zac9q5V78f2H77NTbDWLC2CJO4C4u1S5DtuLdV/j8vveD+lIju6/AI58QLgMwCSRBhFZlIPTtsABqoKjIYfkZLUi4GAucXHOOxSnafmTYhx2EfPXEjQ="></constructor-arg>
+    	<constructor-arg name="format" value="json"></constructor-arg>
+    	<constructor-arg name="charset" value="utf-8"></constructor-arg>
+    	<constructor-arg name="alipayPulicKey" value="MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5IVlRIqJWx8ruFfu/fDuLkBce5b2LL+cI3JKRpNfqtrCrDdkQp2SNoKevT8vDzSpEXC86XwbO9O1F7T1YOXnCGLMbxpnwi3uLjFRB4RfgWER+RvJXn6S5geu+8+WWi7rYmZ+BqzRe9FSa3SpGLjazrTE55mJ87AZ5v3Z3QfLXRHrf6sVxKRKj4PqVolQ4FrEbzx1P6nbAiOfPT5QQJgJJcrJu0AEqtoM19sNTjKa28U1iAOXkrMbaLRh17WNPNvRFG37kqMXaAPMZ5PW0VDtYyylDLmPPt8fDBEJgEhA7ybRepmzgVrocwZoaqHaHY9eTTY5GJJS87hsVs2yi6m1YQIDAQAB"></constructor-arg>
+    	<constructor-arg name="signType" value="RSA2"></constructor-arg>
+    	<property name="sellerId" value="2088102169769676"></property>
+    	<!-- 回调地址 -->
+    	<property name="returnUrl" value="http://localhost:8080/msp/index#/"></property>
+    	<property name="notifyUrl" value="http://ip:port/msp/"></property>
+    </bean>
+</beans>

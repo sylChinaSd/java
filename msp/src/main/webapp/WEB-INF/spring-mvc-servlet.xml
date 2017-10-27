@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:mvc="http://www.springframework.org/schema/mvc"
+    xmlns:p="http://www.springframework.org/schema/p"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+        
+	<!-- 视图解析器 -->
+	<!--  -->
+	<bean id="jspViewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+	    <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+	    <property name="prefix" value="/WEB-INF/pages/"/>
+	    <property name="suffix" value=".jsp"/>
+	</bean>
+	<!--
+	<bean id="htmlViewResolver" class="org.springframework.web.servlet.view.UrlBasedViewResolver">
+		<property name="viewClass" value="org.springframework.web.servlet.view.InternalResourceView"/>
+	    <property name="prefix" value="/WEB-INF/pages/"/>
+	    <property name="suffix" value=".html"/>
+	</bean>-->
+	
+	<!-- 文件上传控制 -->
+	<bean id="multipartResolver"
+        class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+	    <property name="maxUploadSize" value="120000"/>
+	</bean>
+	
+	<!-- 资源映射 -->
+	<mvc:resources mapping="/resources/**" location="/public-resources/" cache-period="31556926">
+		<mvc:cache-control />
+		<mvc:resource-chain resource-cache="true">			
+			<mvc:resolvers>
+				 <mvc:version-resolver>					
+					<mvc:fixed-version-strategy version="1.0.0" patterns="/**/*.js"/>
+				</mvc:version-resolver>
+				<mvc:version-resolver>					
+					<mvc:content-version-strategy patterns="/**"/>
+				</mvc:version-resolver> 	
+			</mvc:resolvers>	
+		</mvc:resource-chain>
+	</mvc:resources>
+	
+	<!-- 组件扫描设置  -->
+    <context:component-scan base-package="com.syl.msp">
+	    <context:exclude-filter type="annotation"
+	                expression="org.springframework.stereotype.Service"/>
+    </context:component-scan>   
+    
+    <!-- 启用注解功能 -->
+	<mvc:annotation-driven>
+		<mvc:message-converters>
+			<bean class="org.springframework.http.converter.StringHttpMessageConverter"/>
+	        <bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter"/>
+	   </mvc:message-converters>
+	</mvc:annotation-driven>
+	
+</beans>

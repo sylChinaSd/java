@@ -1,0 +1,49 @@
+.msp-m-bottom{
+	margin-bottom: 5px;
+}
+.msp-h-margin-zero{
+	margin-left: 0px !important;
+	margin-right: 0px !important;
+}
+.msp-h-padding-zero{
+	padding-left: 0px !important;
+	padding-right: 0px !important;
+}
+
+a.product-name{
+    height: 58px;
+    display: block;
+}
+li.list-tip{
+	margin-bottom: 25px;
+	list-style-type: none;
+    padding-top: 10px;
+    padding-bottom: 5px;
+}
+.shopping-cart-checkbox{
+	line-height: 140px;
+}
+.shopping-cart-checkbox>input{
+	width: 20px;
+	height: 20px;
+	margin:4px;
+}
+
+hr.common{
+	margin-top: 0px;
+	margin-bottom: 0px;	
+	border-top: 1px solid black;
+}
+
+.msp-current-menu{
+	background-color: #555555;
+    color: white;
+    padding-left: 8px !important;
+    padding-top: 5px;
+    margin-bottom: 5px;
+    margin-top: -5px;
+    height: 32px;
+}
+.margin-top-minus{
+	margin-top: -6px;
+}
