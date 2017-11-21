@@ -1,0 +1,101 @@
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+xmlns:beans="http://www.springframework.org/schema/beans"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		http://www.springframework.org/schema/security
+		http://www.springframework.org/schema/security/spring-security.xsd">
+		
+	<!-- Spring Security配置 -->
+	<!-- 不需要权限就可访问的资源 -->
+	<http pattern="/resources/**" security="none"/>
+	
+	<!-- 设置登录认证 -->
+	<!-- 设置访问权限 -->
+    <http use-expressions="true" entry-point-ref="mspEntryPoint" request-matcher="ant">
+		<intercept-url pattern="/index*" access="permitAll"/>
+    	<intercept-url pattern="/product#/" access="permitAll"/>
+    	<intercept-url pattern="/product/query*" access="permitAll"/>
+    	<intercept-url pattern="/user/current" access="permitAll"/>
+    	<intercept-url pattern="/order/alipay*" access="permitAll"/>
+    	
+    	<intercept-url pattern="/product/upload" access="hasAnyRole('ROLE_ADMIN','ROLE_MANAGER')"/>
+		<intercept-url pattern="/product/update" access="hasAnyRole('ROLE_ADMIN','ROLE_MANAGER')"/>
+		<intercept-url pattern="/product/add" access="hasAnyRole('ROLE_ADMIN','ROLE_MANAGER')"/>
+		
+		<intercept-url pattern="/shoppingcart/**" access="hasAnyRole('ROLE_ADMIN','ROLE_USER')"/>
+		
+		<intercept-url pattern="/order/manage/**" access="hasAnyRole('ROLE_ADMIN','ROLE_MANAGER')" />
+		<intercept-url pattern="/order/query/**" access="hasAnyRole('ROLE_ADMIN','ROLE_MANAGER','ROLE_USER')"/>
+		<intercept-url pattern="/order/create*" access="hasAnyRole('ROLE_ADMIN','ROLE_USER')"/>
+		<intercept-url pattern="/order/pay*" access="hasAnyRole('ROLE_ADMIN','ROLE_MANAGER','ROLE_USER')"/>
+		
+		<intercept-url pattern="/user/**/*" access="hasRole('ROLE_ADMIN')"/>
+		
+		<intercept-url pattern="/concern/**/*" access="hasAnyRole('ROLE_ADMIN','ROLE_USER')"/>
+		
+		<intercept-url pattern="/address/**/*" access="hasAnyRole('ROLE_ADMIN','ROLE_USER')"/>
+		 
+		<!-- 单用户登录配置 -->
+		<custom-filter position="CONCURRENT_SESSION_FILTER" ref="concurrencyFilter" />
+		<custom-filter position="FORM_LOGIN_FILTER" ref="myFormLoginFilter" />
+		<!-- 权限不足处理 -->
+		<!-- 退出设置 -->
+		<logout logout-url="/logout" logout-success-url="/index" delete-cookies="JSESSIONID"/>
+		<!-- session管理 -->
+		<session-management session-authentication-strategy-ref="sas"/>
+		<csrf disabled="true"/>
+	</http>
+	<!-- 密码加密器 -->
+	<beans:bean id="bcryptEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder">
+		<beans:constructor-arg name="strength" value="11"/>
+	</beans:bean>
+	<!-- user detail service -->
+	<beans:bean id="mspUserDetailService" class="com.syl.msp.login.service.MspUserDetailService" />
+	<!-- 认证设置-->
+	<beans:bean id="daoAuthenticationProvider" class="org.springframework.security.authentication.dao.DaoAuthenticationProvider">
+		<beans:property name="passwordEncoder" ref="bcryptEncoder"/>
+		<beans:property name="userDetailsService" ref="mspUserDetailService"/>
+	</beans:bean> 
+	<authentication-manager id="authenticationManager" alias="authenticationManager">
+		<authentication-provider ref="daoAuthenticationProvider" />
+	</authentication-manager>
+	<!-- 单用户登录 -->
+	<beans:bean id="concurrencyFilter" class="org.springframework.security.web.session.ConcurrentSessionFilter">
+		<beans:constructor-arg name="sessionRegistry" ref="sessionRegistry" />
+		<beans:constructor-arg name="expiredUrl" value="/index" />
+	</beans:bean>
+	<!-- 自定义表格登录 -->
+	<beans:bean id="myFormLoginFilter" class="com.syl.msp.login.filter.MspUsernamePasswordFilter">
+		<beans:constructor-arg name="pattern" value="/j_spring_security_check"/>
+		<beans:property name="codeParameter" value="code"/>
+		<beans:property name="sessionAuthenticationStrategy" ref="sas" />
+		<beans:property name="authenticationManager" ref="authenticationManager"/>
+	</beans:bean>
+	<!-- session管理策略 -->
+	<beans:bean id="sas" class="org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy">
+		<beans:constructor-arg>
+			<beans:list>
+				<beans:bean class="org.springframework.security.web.authentication.session.ConcurrentSessionControlAuthenticationStrategy">
+					<beans:constructor-arg ref="sessionRegistry"/>
+					<beans:property name="maximumSessions" value="1" />
+					<!-- 先登录的会强制下线 -->
+					<beans:property name="exceptionIfMaximumExceeded" value="false" />
+				</beans:bean>
+				<beans:bean class="org.springframework.security.web.authentication.session.SessionFixationProtectionStrategy" />
+				<beans:bean class="org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy">
+					<beans:constructor-arg ref="sessionRegistry"/>
+				</beans:bean>
+			</beans:list>
+		</beans:constructor-arg>
+	</beans:bean>
+	<beans:bean id="sessionRegistry" class="org.springframework.security.core.session.SessionRegistryImpl" />
+	<!-- 自定义认证失败、权限不足的异常过滤器 -->
+	<beans:bean id="mspEntryPoint" class="org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint">
+		<beans:constructor-arg name="loginFormUrl" value="/index"/>
+	</beans:bean>
+	<!-- 本地化信息 -->
+	<beans:bean id="messageSource" class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+		<beans:property name="basename" value="classpath:messages_zh_CN"/>
+	</beans:bean>
+</beans:beans>
