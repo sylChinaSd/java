@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.syl.msp.login.dao.MspUserDetailDao">
+	<resultMap id="baseResultMap" type="com.syl.msp.login.entity.MspUserDetail">
+		<id property="username" column="username" />
+		<result property="password" column="password" />
+		<result property="enable" column="enabled" />
+	
+		<association property="muda" resultMap="authorityResultMap">
+		</association>
+	</resultMap>
+
+	<resultMap id="authorityResultMap"
+		type="com.syl.msp.login.entity.MspUserDetailAuthority">
+		<result property="username" column="au_username" />
+		<result property="authority" column="au_authority" />
+	</resultMap>
+
+	<resultMap id="resourceResultMap" type="com.syl.msp.login.entity.MspResource">
+		<id property="id" column="id" />
+		<result property="roleName" column="role_name" />
+		<result property="name" column="name" />
+		<result property="rpath" column="rpath" />
+	</resultMap>
+
+	<select id="findByUsername" resultMap="baseResultMap">
+		select a.*,b.username as au_username,b.authority as au_authority from
+			msp_authorities b,(select * from msp_users where username = #{username}) a 
+		where a.username=b.username
+	</select>
+
+	<select id="getResoucesByRole" resultMap="resourceResultMap">
+		select * from
+			msp_resources where role_name = #{role}
+	</select>
+</mapper>

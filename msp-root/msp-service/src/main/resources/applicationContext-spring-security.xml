@@ -1,0 +1,148 @@
+<beans xmlns:sec="http://www.springframework.org/schema/security"
+xmlns="http://www.springframework.org/schema/beans"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		http://www.springframework.org/schema/security
+		http://www.springframework.org/schema/security/spring-security.xsd">
+		
+	<!-- Spring Security配置 -->
+	<bean id="filterChainProxy" class="org.springframework.security.web.FilterChainProxy">
+		<constructor-arg>
+			<list>
+				<sec:filter-chain pattern="/resources/**" filters="none" />
+				<sec:filter-chain pattern="/**"
+					filters="securityContextPersistenceFilter,concurrencyFilter,
+							 	logoutFilter,formLoginFilter,anonymousAuthFilter,
+							 	exceptionTranslationFilter,filterSecurityInterceptor" />
+			</list>
+		</constructor-arg>
+	</bean>
+	<!-- SecurityContext持久化过滤器  -->
+	<bean id="securityContextPersistenceFilter"
+		class="org.springframework.security.web.context.SecurityContextPersistenceFilter">
+		<constructor-arg name="repo">
+			<bean class='org.springframework.security.web.context.HttpSessionSecurityContextRepository'>
+				<property name='allowSessionCreation' value='true' />
+			</bean>
+		</constructor-arg>
+	</bean>
+	
+	<!-- 单用户登录 -->
+	<bean id="concurrencyFilter" class="org.springframework.security.web.session.ConcurrentSessionFilter">
+		<constructor-arg name="sessionRegistry" ref="sessionRegistry" />
+		<constructor-arg name="expiredUrl" value="/login" />
+	</bean>
+	<bean id="sessionRegistry" class="org.springframework.security.core.session.SessionRegistryImpl" />
+	
+	<!-- 注销过滤器 -->
+	<bean id="logoutFilter" class="org.springframework.security.web.authentication.logout.LogoutFilter">
+		<constructor-arg name="logoutSuccessUrl" value="/login?logout"/>
+		<constructor-arg name="handlers">
+			<array>
+				<bean class="org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler">
+					<property name="invalidateHttpSession" value="true" />
+				</bean>
+			</array>
+		</constructor-arg>
+	</bean>
+	
+	<!--  -->
+	<!-- 密码加密器 -->
+	<bean id="bcryptEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder">
+		<constructor-arg name="strength" value="11"/>
+	</bean>
+	<!-- user detail service -->
+	<bean id="mspUserDetailSecurityService" class="com.syl.msp.login.service.impl.MspUserDetailSecurityService" />
+	<!-- 认证设置-->
+	<bean id="daoAuthenticationProvider" class="org.springframework.security.authentication.dao.DaoAuthenticationProvider">
+		<property name="passwordEncoder" ref="bcryptEncoder"/>
+		<property name="userDetailsService" ref="mspUserDetailSecurityService"/>
+	</bean> 
+	<sec:authentication-manager id="authenticationManager" alias="authenticationManager">
+		<sec:authentication-provider ref="daoAuthenticationProvider" />
+	</sec:authentication-manager>
+	<!-- 自定义表格登录 -->
+	<bean id="formLoginFilter" class="com.syl.msp.login.filter.MspUsernamePasswordFilter">
+		<constructor-arg name="pattern" value="/j_spring_security_check"/>
+		<property name="failureHandler">
+			<bean class="org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler">
+				<property name="defaultFailureUrl" value="/login" />
+			</bean>
+		</property>
+		<property name="successHandler">
+			<bean class="org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler">
+				<property name="defaultTargetUrl" value="/product" />
+			</bean>
+		</property>
+		<property name="codeParameter" value="code"/>
+		<property name="sessionAuthenticationStrategy" ref="sas" />
+		<property name="authenticationManager" ref="authenticationManager"/>
+	</bean>
+	<!-- session管理策略 -->
+	<bean id="sas" class="org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy">
+		<constructor-arg>
+			<list>
+				<bean class="org.springframework.security.web.authentication.session.ConcurrentSessionControlAuthenticationStrategy">
+					<constructor-arg ref="sessionRegistry"/>
+					<property name="maximumSessions" value="1" />
+					<!-- 先登录的会强制下线 -->
+					<property name="exceptionIfMaximumExceeded" value="false" />
+				</bean>
+				<bean class="org.springframework.security.web.authentication.session.SessionFixationProtectionStrategy" />
+				<bean class="org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy">
+					<constructor-arg ref="sessionRegistry"/>
+				</bean>
+			</list>
+		</constructor-arg>
+	</bean>
+	
+	<!-- 匿名用户的过滤器 -->
+	<bean id="anonymousAuthFilter"
+		class="org.springframework.security.web.authentication.AnonymousAuthenticationFilter">
+		<constructor-arg name="key" value="foobar" />
+	</bean>
+	<bean id="anonymousAuthenticationProvider"
+		class="org.springframework.security.authentication.AnonymousAuthenticationProvider">
+		<constructor-arg name="key" value="foobar" />
+	</bean>
+	
+	<!-- 未登录和权限不足的异常处理的过滤器 -->
+	<bean id="exceptionTranslationFilter"
+		class="org.springframework.security.web.access.ExceptionTranslationFilter">
+		<constructor-arg name="authenticationEntryPoint" ref="authenticationEntryPoint" />
+		<property name="accessDeniedHandler" ref="accessDeniedHandler" />
+	</bean>
+	<bean id="authenticationEntryPoint"
+		class="org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint">
+		<constructor-arg name="loginFormUrl" value="/login" />
+	</bean>
+	<bean id="accessDeniedHandler"
+		class="org.springframework.security.web.access.AccessDeniedHandlerImpl">
+		<property name="errorPage" value="/login/accessDenied" />
+	</bean>
+	
+	<!-- 保护uri的过滤器-->
+	<bean id="filterSecurityInterceptor"
+		class="org.springframework.security.web.access.intercept.FilterSecurityInterceptor">
+		<property name="authenticationManager" ref="authenticationManager" />
+		<property name="accessDecisionManager" ref="accessDecisionManager" />
+		<property name="securityMetadataSource">
+			<sec:filter-security-metadata-source use-expressions="true">
+				<sec:intercept-url pattern="/product/**" access="hasAnyRole('ROLE_USER,ROLE_MANAGER')" />
+				<sec:intercept-url pattern="/manage/**" access="hasRole('ROLE_MANAGER')" />
+				<sec:intercept-url pattern="/login/**" access="permitAll" />
+			</sec:filter-security-metadata-source>
+		</property>
+	</bean>
+	<bean id="accessDecisionManager" class="org.springframework.security.access.vote.AffirmativeBased">
+		<constructor-arg name="decisionVoters">
+			<list>
+				<bean class="org.springframework.security.web.access.expression.WebExpressionVoter"/>
+				<bean class="org.springframework.security.access.vote.RoleVoter" />
+				<bean class="org.springframework.security.access.vote.AuthenticatedVoter" /> 
+			</list>
+		</constructor-arg>
+		<property name="allowIfAllAbstainDecisions" value="false" />
+	</bean>
+</beans>
